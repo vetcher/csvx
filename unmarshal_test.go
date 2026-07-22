@@ -80,3 +80,40 @@ func TestUnmarshal_FieldErrorOnBadCell(t *testing.T) {
 		t.Fatalf("Column = %q, want client_age", fe.Column)
 	}
 }
+
+func TestUnmarshal_NoHeaderStruct(t *testing.T) {
+	type Row struct {
+		A string `csv:"0"`
+		B string `csv:"1"`
+	}
+	in := []byte("x,y\n")
+	var got []Row
+	if err := Unmarshal(in, &got, NoHeader(true)); err != nil {
+		t.Fatal(err)
+	}
+	if got[0].A != "x" || got[0].B != "y" {
+		t.Fatalf("%+v", got)
+	}
+}
+
+func TestUnmarshal_NoHeaderExtraCellsRejected(t *testing.T) {
+	type Row struct {
+		A string `csv:"0"`
+	}
+	in := []byte("x,y\n")
+	var got []Row
+	if err := Unmarshal(in, &got, NoHeader(true)); err == nil {
+		t.Fatal("expected unknown cell error")
+	}
+}
+
+func TestUnmarshal_MapSlice(t *testing.T) {
+	in := []byte("a,b\n1,2\n")
+	var got []map[string]string
+	if err := Unmarshal(in, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got[0]["a"] != "1" || got[0]["b"] != "2" {
+		t.Fatalf("%+v", got)
+	}
+}

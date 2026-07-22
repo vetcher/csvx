@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -26,6 +27,168 @@ func UnmarshalRead(r io.Reader, v any, opts ...Options) error {
 	elemType := rv.Type().Elem()
 	reader := newStdlibReader(r, o)
 
+	inner := elemType
+	if inner.Kind() == reflect.Ptr {
+		inner = inner.Elem()
+	}
+
+	switch {
+	case isMapStringString(inner):
+		return unmarshalMapStringSlice(rv, reader, inner, o)
+	case inner.Kind() == reflect.Slice && inner.Elem().Kind() == reflect.String:
+		return unmarshalStringMatrix(rv, reader, o)
+	case o.noHeader:
+		return unmarshalStructSliceNoHeader(rv, reader, elemType, o)
+	default:
+		return unmarshalStructSliceHeader(rv, reader, elemType, o)
+	}
+}
+
+func isMapStringString(t reflect.Type) bool {
+	return t.Kind() == reflect.Map &&
+		t.Key().Kind() == reflect.String &&
+		t.Elem().Kind() == reflect.String
+}
+
+func unmarshalMapStringSlice(rv reflect.Value, reader recordReader, mapType reflect.Type, o options) error {
+	header, err := reader.Read()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	header = append([]string(nil), header...)
+
+	dataRow := 0
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		record = append([]string(nil), record...)
+		dataRow++
+
+		m := reflect.MakeMap(mapType)
+		for i, col := range header {
+			val := ""
+			if i < len(record) {
+				val = record[i]
+			}
+			m.SetMapIndex(reflect.ValueOf(col), reflect.ValueOf(val))
+		}
+
+		elem := m
+		if rv.Type().Elem().Kind() == reflect.Ptr {
+			ptr := reflect.New(mapType)
+			ptr.Elem().Set(m)
+			elem = ptr
+		}
+		rv.Set(reflect.Append(rv, elem))
+	}
+	return nil
+}
+
+func unmarshalStringMatrix(rv reflect.Value, reader recordReader, o options) error {
+	if !o.noHeader {
+		return &SemanticError{Msg: "unmarshal into [][]string requires NoHeader"}
+	}
+	rowType := rv.Type().Elem()
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		record = append([]string(nil), record...)
+
+		row := reflect.MakeSlice(rowType, len(record), len(record))
+		for i, cell := range record {
+			row.Index(i).SetString(cell)
+		}
+		rv.Set(reflect.Append(rv, row))
+	}
+	return nil
+}
+
+func unmarshalStructSliceNoHeader(rv reflect.Value, reader recordReader, elemType reflect.Type, o options) error {
+	plan, err := buildTypePlan(elemType, o)
+	if err != nil {
+		return err
+	}
+
+	maxCol := -1
+	for _, fp := range plan.fields {
+		if fp.colIndex > maxCol {
+			maxCol = fp.colIndex
+		}
+	}
+
+	dataRow := 0
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		record = append([]string(nil), record...)
+		dataRow++
+
+		if err := validateNoHeaderTrailingCells(record, maxCol, o); err != nil {
+			return err
+		}
+
+		elem, err := newSliceElement(elemType)
+		if err != nil {
+			return err
+		}
+
+		for _, fp := range plan.fields {
+			cell := ""
+			if fp.colIndex < len(record) {
+				cell = record[fp.colIndex]
+			}
+			dst := elem
+			if dst.Kind() == reflect.Ptr {
+				dst = dst.Elem()
+			}
+			dst = dst.FieldByIndex(fp.index)
+			if err := unmarshalCell(dst, cell, o); err != nil {
+				return &FieldError{Row: dataRow, Column: noHeaderColumnName(fp), Err: err}
+			}
+		}
+
+		rv.Set(reflect.Append(rv, elem))
+	}
+	return nil
+}
+
+func noHeaderColumnName(fp fieldPlan) string {
+	if fp.name != "" {
+		return fp.name
+	}
+	return strconv.Itoa(fp.colIndex)
+}
+
+func validateNoHeaderTrailingCells(record []string, maxCol int, o options) error {
+	if o.allowUnknownColumns || maxCol < 0 {
+		return nil
+	}
+	if len(record) > maxCol+1 {
+		return &SemanticError{Msg: "unknown column " + strconvQuote(record[maxCol+1])}
+	}
+	return nil
+}
+
+func unmarshalStructSliceHeader(rv reflect.Value, reader recordReader, elemType reflect.Type, o options) error {
 	header, err := reader.Read()
 	if err == io.EOF {
 		return nil

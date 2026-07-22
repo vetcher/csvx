@@ -136,6 +136,65 @@ func TestUnmarshalCell_TextBeatsBuiltin(t *testing.T) {
 	}
 }
 
+type ptrCSVUnmarshal struct{ S string }
+
+func (p *ptrCSVUnmarshal) UnmarshalCSV(s string) error {
+	p.S = "ptr:" + s
+	return nil
+}
+
+func TestUnmarshalCell_NilPointerFieldUnmarshalCSV(t *testing.T) {
+	type row struct {
+		P *ptrCSVUnmarshal
+	}
+	var r row
+	dst := reflect.ValueOf(&r).Elem().Field(0)
+	if err := unmarshalCell(dst, "x", joinOptions(nil)); err != nil {
+		t.Fatal(err)
+	}
+	if r.P == nil || r.P.S != "ptr:x" {
+		t.Fatalf("got %#v", r.P)
+	}
+}
+
+func TestUnmarshalCell_NilPointerFieldUnmarshalCSV_EmptyCell(t *testing.T) {
+	type row struct {
+		P *ptrCSVUnmarshal
+	}
+	var r row
+	dst := reflect.ValueOf(&r).Elem().Field(0)
+	if err := unmarshalCell(dst, "", joinOptions(nil)); err != nil {
+		t.Fatal(err)
+	}
+	if r.P == nil {
+		t.Fatal("expected allocated pointer for empty cell with UnmarshalCSV")
+	}
+	if r.P.S != "ptr:" {
+		t.Fatalf("got %q", r.P.S)
+	}
+}
+
+type ptrTextUnmarshal struct{ N int }
+
+func (p *ptrTextUnmarshal) UnmarshalText(text []byte) error {
+	p.N = len(text)
+	return nil
+}
+
+func TestUnmarshalCell_NilPointerFieldUnmarshalText(t *testing.T) {
+	type row struct {
+		P *ptrTextUnmarshal
+	}
+	var r row
+	dst := reflect.ValueOf(&r).Elem().Field(0)
+	if err := unmarshalCell(dst, "ab", joinOptions(nil)); err != nil {
+		t.Fatal(err)
+	}
+	if r.P == nil || r.P.N != 2 {
+		t.Fatalf("got %#v", r.P)
+	}
+}
+
 type unmarshalMapMissU struct{}
 
 func TestUnmarshalCell_UnmarshalMapMissDoesNotAllocateNilPointer(t *testing.T) {

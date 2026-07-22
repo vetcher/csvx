@@ -203,6 +203,15 @@ func marshalViaCSVInterface(v reflect.Value) (string, bool, error) {
 }
 
 func unmarshalViaCSVInterface(dst reflect.Value, cell string) (bool, error) {
+	unmarshalerType := reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+	if dst.Kind() == reflect.Pointer {
+		if dst.Type().Implements(unmarshalerType) {
+			if dst.IsNil() {
+				dst.Set(reflect.New(dst.Type().Elem()))
+			}
+			return true, dst.Interface().(Unmarshaler).UnmarshalCSV(cell)
+		}
+	}
 	if dst.CanAddr() {
 		if u, ok := dst.Addr().Interface().(Unmarshaler); ok {
 			return true, u.UnmarshalCSV(cell)
@@ -233,6 +242,15 @@ func marshalViaText(v reflect.Value) (string, bool, error) {
 }
 
 func unmarshalViaText(dst reflect.Value, cell string) (bool, error) {
+	textUnmarshalerType := reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	if dst.Kind() == reflect.Pointer {
+		if dst.Type().Implements(textUnmarshalerType) {
+			if dst.IsNil() {
+				dst.Set(reflect.New(dst.Type().Elem()))
+			}
+			return true, dst.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(cell))
+		}
+	}
 	if dst.CanAddr() {
 		if u, ok := dst.Addr().Interface().(encoding.TextUnmarshaler); ok {
 			return true, u.UnmarshalText([]byte(cell))

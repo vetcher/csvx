@@ -76,6 +76,19 @@ func TestMarshal_RejectNonSlice(t *testing.T) {
 	}
 }
 
+func TestMarshal_NoHeaderSparseColumnIndex(t *testing.T) {
+	type Row struct {
+		A string `csv:"2"`
+	}
+	b, err := Marshal([]Row{{A: "z"}}, NoHeader(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != ",,z\n" {
+		t.Fatalf("got %q", b)
+	}
+}
+
 func TestMarshal_NoHeader(t *testing.T) {
 	in := []Client{{ID: "1", Name: "Jose", Age: 42}}
 	b, err := Marshal(in, NoHeader(true))

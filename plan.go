@@ -93,6 +93,9 @@ func walkStructFields(st reflect.Type, indexPrefix []int, o options, out *[]fiel
 			continue
 		}
 
+		for ft.Kind() == reflect.Pointer {
+			ft = ft.Elem()
+		}
 		if ft.Kind() == reflect.Interface {
 			return &SemanticError{Msg: "interface types are not supported"}
 		}

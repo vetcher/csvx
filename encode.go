@@ -57,14 +57,9 @@ func (e *Encoder) Encode(v any) error {
 		})
 	}
 
-	record := make([]string, len(fields))
-	for j, fp := range fields {
-		fv := rv.FieldByIndex(fp.index)
-		cell, err := marshalFieldCell(fv, fp, e.o)
-		if err != nil {
-			return &FieldError{Row: 1, Column: columnNameForField(fp, e.o), Err: err}
-		}
-		record[j] = cell
+	record, err := marshalStructRecord(rv, fields, e.o, 1)
+	if err != nil {
+		return err
 	}
 	if err := e.writer.Write(record); err != nil {
 		return err

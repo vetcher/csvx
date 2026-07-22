@@ -71,14 +71,9 @@ func MarshalWrite(w io.Writer, v any, opts ...Options) error {
 			elem = elem.Elem()
 		}
 
-		record := make([]string, len(fields))
-		for j, fp := range fields {
-			fv := elem.FieldByIndex(fp.index)
-			cell, err := marshalFieldCell(fv, fp, o)
-			if err != nil {
-				return &FieldError{Row: i + 1, Column: columnNameForField(fp, o), Err: err}
-			}
-			record[j] = cell
+		record, err := marshalStructRecord(elem, fields, o, i+1)
+		if err != nil {
+			return err
 		}
 		if err := writer.Write(record); err != nil {
 			return err
@@ -86,6 +81,34 @@ func MarshalWrite(w io.Writer, v any, opts ...Options) error {
 	}
 
 	return writer.Flush()
+}
+
+func marshalStructRecord(elem reflect.Value, fields []fieldPlan, o options, row int) ([]string, error) {
+	var record []string
+	if o.noHeader {
+		maxCol := -1
+		for _, fp := range fields {
+			if fp.colIndex > maxCol {
+				maxCol = fp.colIndex
+			}
+		}
+		record = make([]string, maxCol+1)
+	} else {
+		record = make([]string, len(fields))
+	}
+	for j, fp := range fields {
+		fv := elem.FieldByIndex(fp.index)
+		cell, err := marshalFieldCell(fv, fp, o)
+		if err != nil {
+			return nil, &FieldError{Row: row, Column: columnNameForField(fp, o), Err: err}
+		}
+		if o.noHeader {
+			record[fp.colIndex] = cell
+		} else {
+			record[j] = cell
+		}
+	}
+	return record, nil
 }
 
 func columnNameForField(fp fieldPlan, o options) string {

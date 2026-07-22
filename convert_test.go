@@ -64,6 +64,41 @@ func TestParseBuiltin_AllocEmptyPointersExistingNonNil(t *testing.T) {
 	}
 }
 
+func TestParseBuiltin_EmptyCellZeroValueNonPointer(t *testing.T) {
+	cases := []struct {
+		name string
+		set  func() reflect.Value
+	}{
+		{"int", func() reflect.Value { var v int; return reflect.ValueOf(&v).Elem() }},
+		{"bool", func() reflect.Value { var v bool; return reflect.ValueOf(&v).Elem() }},
+		{"float64", func() reflect.Value { var v float64; return reflect.ValueOf(&v).Elem() }},
+		{"string", func() reflect.Value { var v string; return reflect.ValueOf(&v).Elem() }},
+		{"[]byte", func() reflect.Value { var v []byte; return reflect.ValueOf(&v).Elem() }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rv := tc.set()
+			if err := parseBuiltin(rv, "", false); err != nil {
+				t.Fatalf("empty cell: %v", err)
+			}
+			if !rv.IsZero() {
+				t.Fatalf("want zero value, got %#v", rv.Interface())
+			}
+		})
+	}
+}
+
+func TestParseBuiltin_EmptyCellPreservesNonZeroIntWhenNonEmpty(t *testing.T) {
+	var i int = 99
+	rv := reflect.ValueOf(&i).Elem()
+	if err := parseBuiltin(rv, "5", false); err != nil {
+		t.Fatal(err)
+	}
+	if i != 5 {
+		t.Fatalf("got %d", i)
+	}
+}
+
 func TestFormatBuiltin_SliceByteAsString(t *testing.T) {
 	s, err := formatBuiltin(reflect.ValueOf([]byte("hi")))
 	if err != nil {

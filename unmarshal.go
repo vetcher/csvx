@@ -34,6 +34,9 @@ func UnmarshalRead(r io.Reader, v any, opts ...Options) error {
 
 	switch {
 	case isMapStringString(inner):
+		if o.noHeader {
+			return &SemanticError{Msg: "unmarshal into map[string]string requires header row"}
+		}
 		return unmarshalMapStringSlice(rv, reader, inner, o)
 	case inner.Kind() == reflect.Slice && inner.Elem().Kind() == reflect.String:
 		return unmarshalStringMatrix(rv, reader, o)

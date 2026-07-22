@@ -2,6 +2,7 @@ package csvx
 
 import (
 	"encoding/csv"
+	"errors"
 	"io"
 )
 
@@ -21,7 +22,17 @@ func newStdlibReader(r io.Reader, o options) recordReader {
 	return &stdlibReader{r: cr}
 }
 
-func (s *stdlibReader) Read() ([]string, error) { return s.r.Read() }
+func (s *stdlibReader) Read() ([]string, error) {
+	rec, err := s.r.Read()
+	if err != nil {
+		var pe *csv.ParseError
+		if errors.As(err, &pe) {
+			return nil, &SyntaxError{Msg: err.Error()}
+		}
+		return nil, err
+	}
+	return rec, nil
+}
 
 type stdlibWriter struct{ w *csv.Writer }
 

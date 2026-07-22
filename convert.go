@@ -70,7 +70,7 @@ func parseBuiltin(dst reflect.Value, cell string, allocEmptyPointers bool) error
 		}
 		return parseBuiltin(dst.Elem(), cell, allocEmptyPointers)
 	}
-	if cell == "" && allocEmptyPointers {
+	if cell == "" {
 		dst.Set(reflect.Zero(dst.Type()))
 		return nil
 	}

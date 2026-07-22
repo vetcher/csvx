@@ -1,6 +1,7 @@
 package csvx
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -21,6 +22,19 @@ func TestStdlibReader_ReadsRecords(t *testing.T) {
 	}
 	if rec[0] != "1" || rec[1] != "2" {
 		t.Fatalf("got %#v", rec)
+	}
+}
+
+func TestStdlibReader_ParseErrorIsSyntaxError(t *testing.T) {
+	in := "\"unclosed\n"
+	r := newStdlibReader(strings.NewReader(in), joinOptions(nil))
+	_, err := r.Read()
+	if err == nil {
+		t.Fatal("expected parse error")
+	}
+	var se *SyntaxError
+	if !errors.As(err, &se) {
+		t.Fatalf("expected *SyntaxError, got %T: %v", err, err)
 	}
 }
 

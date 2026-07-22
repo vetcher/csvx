@@ -107,6 +107,33 @@ func TestUnmarshal_NoHeaderExtraCellsRejected(t *testing.T) {
 	}
 }
 
+func TestUnmarshal_EmptyBuiltinCellIsZero(t *testing.T) {
+	in := []byte("client_id,client_name,client_age\n1,Jose,\n")
+	var got []Client
+	if err := Unmarshal(in, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Age != 0 {
+		t.Fatalf("Age = %d, want 0", got[0].Age)
+	}
+}
+
+func TestUnmarshal_NoHeaderMapSliceRejected(t *testing.T) {
+	in := []byte("a,b\n1,2\n")
+	var got []map[string]string
+	err := Unmarshal(in, &got, NoHeader(true))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var se *SemanticError
+	if !errors.As(err, &se) {
+		t.Fatalf("expected *SemanticError, got %T: %v", err, err)
+	}
+	if se.Msg != "unmarshal into map[string]string requires header row" {
+		t.Fatalf("Msg = %q", se.Msg)
+	}
+}
+
 func TestUnmarshal_MapSlice(t *testing.T) {
 	in := []byte("a,b\n1,2\n")
 	var got []map[string]string

@@ -65,6 +65,21 @@ func TestBuildTypePlan_RejectsAnyField(t *testing.T) {
 	}
 }
 
+type badPtrAny struct {
+	X *any `csv:"x"`
+}
+
+func TestBuildTypePlan_RejectsPointerToAnyField(t *testing.T) {
+	_, err := buildTypePlan(reflect.TypeOf(badPtrAny{}), joinOptions(nil))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var sem *SemanticError
+	if !errors.As(err, &sem) {
+		t.Fatalf("expected *SemanticError, got %T", err)
+	}
+}
+
 type planInner struct {
 	A int `csv:"a"`
 }

@@ -1,0 +1,10 @@
+goos: linux
+goarch: amd64
+pkg: github.com/vetcher/csvx/bench
+cpu: Intel(R) Xeon(R) Processor
+BenchmarkEncodingCSV_Parse-4      	     542	   2231071 ns/op	 263.98 MB/s	 2227654 B/op	   20019 allocs/op
+BenchmarkCSVx_UnmarshalStruct-4   	     135	   8646525 ns/op	  68.11 MB/s	12582805 B/op	   40051 allocs/op
+BenchmarkCSVx_MarshalStruct-4     	     344	   3439301 ns/op	 3698158 B/op	   10014 allocs/op
+BenchmarkCSVx_DecodeAllocs-4      	     279	   4298930 ns/op	 137.00 MB/s	 2229242 B/op	   20032 allocs/op
+PASS
+ok  	github.com/vetcher/csvx/bench	6.686s

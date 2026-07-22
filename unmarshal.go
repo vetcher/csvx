@@ -60,7 +60,6 @@ func unmarshalMapStringSlice(rv reflect.Value, reader recordReader, mapType refl
 	}
 	header = append([]string(nil), header...)
 
-	dataRow := 0
 	for {
 		record, err := reader.Read()
 		if err == io.EOF {
@@ -70,7 +69,6 @@ func unmarshalMapStringSlice(rv reflect.Value, reader recordReader, mapType refl
 			return err
 		}
 		record = append([]string(nil), record...)
-		dataRow++
 
 		m := reflect.MakeMap(mapType)
 		for i, col := range header {

@@ -117,3 +117,33 @@ func TestUnmarshal_MapSlice(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+func TestUnmarshal_NoHeaderStringMatrix(t *testing.T) {
+	in := []byte("a,b\nc,d\n")
+	var got [][]string
+	if err := Unmarshal(in, &got, NoHeader(true)); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len(got) = %d, want 2", len(got))
+	}
+	if got[0][0] != "a" || got[0][1] != "b" || got[1][0] != "c" || got[1][1] != "d" {
+		t.Fatalf("%+v", got)
+	}
+}
+
+func TestUnmarshal_StringMatrixRequiresNoHeader(t *testing.T) {
+	in := []byte("a,b\nc,d\n")
+	var got [][]string
+	err := Unmarshal(in, &got)
+	if err == nil {
+		t.Fatal("expected error without NoHeader")
+	}
+	var se *SemanticError
+	if !errors.As(err, &se) {
+		t.Fatalf("expected *SemanticError, got %T: %v", err, err)
+	}
+	if se.Msg != "unmarshal into [][]string requires NoHeader" {
+		t.Fatalf("Msg = %q", se.Msg)
+	}
+}

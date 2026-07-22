@@ -52,6 +52,18 @@ func TestParseBuiltin_AllocEmptyPointers(t *testing.T) {
 	}
 }
 
+func TestParseBuiltin_AllocEmptyPointersExistingNonNil(t *testing.T) {
+	seven := 7
+	p := &seven
+	rv := reflect.ValueOf(&p).Elem()
+	if err := parseBuiltin(rv, "", true); err != nil {
+		t.Fatal(err)
+	}
+	if p == nil || *p != 0 {
+		t.Fatalf("got %#v", p)
+	}
+}
+
 func TestFormatBuiltin_SliceByteAsString(t *testing.T) {
 	s, err := formatBuiltin(reflect.ValueOf([]byte("hi")))
 	if err != nil {

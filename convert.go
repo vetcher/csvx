@@ -58,12 +58,16 @@ func parseBuiltin(dst reflect.Value, cell string, allocEmptyPointers bool) error
 			if dst.IsNil() {
 				dst.Set(reflect.New(dst.Type().Elem()))
 			}
-			return nil
+			return parseBuiltin(dst.Elem(), cell, allocEmptyPointers)
 		}
 		if dst.IsNil() {
 			dst.Set(reflect.New(dst.Type().Elem()))
 		}
 		return parseBuiltin(dst.Elem(), cell, allocEmptyPointers)
+	}
+	if cell == "" && allocEmptyPointers {
+		dst.Set(reflect.Zero(dst.Type()))
+		return nil
 	}
 	switch dst.Kind() {
 	case reflect.String:

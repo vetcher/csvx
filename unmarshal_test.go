@@ -1,6 +1,9 @@
 package csvx
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 type Client struct {
 	ID   string `csv:"client_id"`
@@ -47,5 +50,33 @@ func TestUnmarshal_AllowUnknownColumn(t *testing.T) {
 	}
 	if got[0].Name != "Jose" {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestUnmarshal_MissingExpectedColumn(t *testing.T) {
+	in := []byte("client_id,client_name\n1,Jose\n")
+	var got []Client
+	err := Unmarshal(in, &got)
+	if err == nil {
+		t.Fatal("expected error for missing client_age column")
+	}
+}
+
+func TestUnmarshal_FieldErrorOnBadCell(t *testing.T) {
+	in := []byte("client_id,client_name,client_age\n1,Jose,nope\n")
+	var got []Client
+	err := Unmarshal(in, &got)
+	if err == nil {
+		t.Fatal("expected error for invalid age cell")
+	}
+	var fe *FieldError
+	if !errors.As(err, &fe) {
+		t.Fatalf("expected *FieldError, got %T: %v", err, err)
+	}
+	if fe.Row != 1 {
+		t.Fatalf("Row = %d, want 1", fe.Row)
+	}
+	if fe.Column != "client_age" {
+		t.Fatalf("Column = %q, want client_age", fe.Column)
 	}
 }

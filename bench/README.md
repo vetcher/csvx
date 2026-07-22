@@ -45,3 +45,14 @@ go test -tags nogocsv -bench=. -benchmem -count=1
 | `BenchmarkGoCSV_UnmarshalStruct` | 8,297,291 | 70.98 | 9,611,754 | 140,059 |
 
 Results from `go test -bench=. -benchmem -count=1` in this directory. Re-run on your machine to refresh; numbers vary by hardware.
+
+## Task 12: `csvtext` gate (parse-only)
+
+`internal/fastcsv` was compared to `encoding/csv` on the same ~10k×10 fixture (`go test ./internal/fastcsv -bench=Parse -benchmem -count=5`, go1.24 linux/amd64):
+
+| Benchmark | ns/op | MB/s | B/op | allocs/op |
+|-----------|------:|-----:|-----:|----------:|
+| `BenchmarkParse_EncodingCSV` | ~1,459,000 | ~404 | 627,640 | 10,019 |
+| `BenchmarkParse_FastCSV` | ~2,739,000 | ~215 | 781,730 | 100,005 |
+
+**Gate: LOSE** — custom parser is ~1.9× slower and allocates ~10× more. Public `csvtext` was **not** exported; csvx stays on the stdlib backend.

@@ -48,3 +48,5 @@ func main() {
 ## Benchmarks
 
 See [bench/README.md](bench/README.md) for comparison results.
+
+**CSV backend:** `encoding/csv` (stdlib). An experimental parser in `internal/fastcsv` did not pass the parse benchmark gate vs `encoding/csv`, so there is no public `csvtext` package.

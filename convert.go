@@ -61,7 +61,12 @@ func parseBuiltin(dst reflect.Value, cell string, allocEmptyPointers bool) error
 			return parseBuiltin(dst.Elem(), cell, allocEmptyPointers)
 		}
 		if dst.IsNil() {
-			dst.Set(reflect.New(dst.Type().Elem()))
+			tmp := reflect.New(dst.Type().Elem())
+			if err := parseBuiltin(tmp.Elem(), cell, allocEmptyPointers); err != nil {
+				return err
+			}
+			dst.Set(tmp)
+			return nil
 		}
 		return parseBuiltin(dst.Elem(), cell, allocEmptyPointers)
 	}

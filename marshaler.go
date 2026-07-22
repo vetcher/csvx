@@ -169,11 +169,13 @@ func lookupUnmarshalMap(byType map[reflect.Type]unmarshalFn, dst reflect.Value) 
 		return fn, true
 	}
 	if dst.Kind() == reflect.Pointer {
-		if dst.IsNil() {
-			dst.Set(reflect.New(dst.Type().Elem()))
-		}
 		if fn, ok := byType[dst.Type().Elem()]; ok {
-			return func(dst reflect.Value, cell string) error { return fn(dst.Elem(), cell) }, true
+			return func(dst reflect.Value, cell string) error {
+				if dst.IsNil() {
+					dst.Set(reflect.New(dst.Type().Elem()))
+				}
+				return fn(dst.Elem(), cell)
+			}, true
 		}
 	}
 	if dst.CanAddr() {

@@ -136,6 +136,22 @@ func TestUnmarshalCell_TextBeatsBuiltin(t *testing.T) {
 	}
 }
 
+type unmarshalMapMissU struct{}
+
+func TestUnmarshalCell_UnmarshalMapMissDoesNotAllocateNilPointer(t *testing.T) {
+	ClearRegistry()
+	local := UnmarshalFunc(func(string) (int, error) { return 0, nil })
+	var p *unmarshalMapMissU
+	dst := reflect.ValueOf(&p).Elem()
+	err := unmarshalCell(dst, "x", joinOptions([]Options{WithUnmarshalers(local)}))
+	if err == nil {
+		t.Fatal("expected error unmarshaling unsupported type")
+	}
+	if p != nil {
+		t.Fatal("nil pointer must stay nil when unmarshal map probe misses")
+	}
+}
+
 // Ensure encoding imports are used for interface satisfaction checks.
 var (
 	_ encoding.TextMarshaler   = textMarshalInt(0)

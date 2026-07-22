@@ -42,6 +42,17 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("%+v\n", out)
+
+	// Or bind already-parsed rows:
+	records := [][]string{
+		{"client_id", "client_name", "client_age"},
+		{"3", "Ana", "31"},
+	}
+	var fromRows []Client
+	if err := csvx.UnmarshalRecords(records, &fromRows); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%+v\n", fromRows)
 }
 ```
 

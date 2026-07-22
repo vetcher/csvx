@@ -14,37 +14,7 @@ func Unmarshal(data []byte, v any, opts ...Options) error {
 
 func UnmarshalRead(r io.Reader, v any, opts ...Options) error {
 	o := joinOptions(opts)
-
-	rv := reflect.ValueOf(v)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return &SemanticError{Msg: "unmarshal destination must be a non-nil pointer"}
-	}
-	rv = rv.Elem()
-	if rv.Kind() != reflect.Slice {
-		return &SemanticError{Msg: "unmarshal destination must be pointer to slice"}
-	}
-
-	elemType := rv.Type().Elem()
-	reader := newStdlibReader(r, o)
-
-	inner := elemType
-	if inner.Kind() == reflect.Ptr {
-		inner = inner.Elem()
-	}
-
-	switch {
-	case isMapStringString(inner):
-		if o.noHeader {
-			return &SemanticError{Msg: "unmarshal into map[string]string requires header row"}
-		}
-		return unmarshalMapStringSlice(rv, reader, inner, o)
-	case inner.Kind() == reflect.Slice && inner.Elem().Kind() == reflect.String:
-		return unmarshalStringMatrix(rv, reader, o)
-	case o.noHeader:
-		return unmarshalStructSliceNoHeader(rv, reader, elemType, o)
-	default:
-		return unmarshalStructSliceHeader(rv, reader, elemType, o)
-	}
+	return unmarshalFromRecordReader(newStdlibReader(r, o), v, o)
 }
 
 func isMapStringString(t reflect.Type) bool {

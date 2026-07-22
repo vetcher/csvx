@@ -56,6 +56,8 @@ Marshal(v any, opts ...Options) ([]byte, error)
 Unmarshal(data []byte, v any, opts ...Options) error
 MarshalWrite(w io.Writer, v any, opts ...Options) error
 UnmarshalRead(r io.Reader, v any, opts ...Options) error
+UnmarshalRecords(records [][]string, v any, opts ...Options) error
+UnmarshalRecord(record []string, v any, opts ...Options) error // NoHeader only; one struct
 
 NewEncoder(w io.Writer, opts ...Options) *Encoder
 NewDecoder(r io.Reader, opts ...Options) *Decoder

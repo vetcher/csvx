@@ -162,7 +162,7 @@ func unmarshalStructSliceNoHeader(rv reflect.Value, reader recordReader, elemTyp
 				dst = dst.Elem()
 			}
 			dst = dst.FieldByIndex(fp.index)
-			if err := unmarshalCell(dst, cell, o); err != nil {
+			if err := unmarshalField(dst, cell, fp, o); err != nil {
 				return &FieldError{Row: dataRow, Column: noHeaderColumnName(fp), Err: err}
 			}
 		}
@@ -238,7 +238,7 @@ func unmarshalStructSliceHeader(rv reflect.Value, reader recordReader, elemType 
 				dst = dst.Elem()
 			}
 			dst = dst.FieldByIndex(fp.index)
-			if err := unmarshalCell(dst, cell, o); err != nil {
+			if err := unmarshalField(dst, cell, fp, o); err != nil {
 				return &FieldError{Row: dataRow, Column: fp.name, Err: err}
 			}
 		}

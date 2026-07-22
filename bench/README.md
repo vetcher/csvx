@@ -26,12 +26,14 @@ go test -bench=. -benchmem -count=1
 
 | Benchmark | ns/op | MB/s | B/op | allocs/op |
 |-----------|------:|-----:|-----:|----------:|
-| `BenchmarkEncodingCSV_Parse` | 2,233,872 | 263.65 | 2,227,696 | 20,020 |
-| `BenchmarkCSVx_UnmarshalStruct` | 18,251,311 | 32.27 | 15,782,958 | 240,056 |
-| `BenchmarkCSVx_MarshalStruct` | 12,761,617 | — | 6,898,109 | 210,018 |
-| `BenchmarkCSVx_DecodeAllocs` | 14,060,610 | 41.89 | 5,429,359 | 220,035 |
+| `BenchmarkEncodingCSV_Parse` | 2,231,071 | 263.98 | 2,227,654 | 20,019 |
+| `BenchmarkCSVx_UnmarshalStruct` | 8,646,525 | 68.11 | 12,582,805 | 40,051 |
+| `BenchmarkCSVx_MarshalStruct` | 3,439,301 | — | 3,698,158 | 10,014 |
+| `BenchmarkCSVx_DecodeAllocs` | 4,298,930 | 137.00 | 2,229,242 | 20,032 |
 
 Results from `go test -bench=. -benchmem -count=1` in this directory. Re-run on your machine to refresh; numbers vary by hardware.
+
+Field converters are classified once in the type plan (builtin / `MarshalCSV` / `TextMarshaler` / slow). Builtin fields skip per-cell interface probes — Decode allocs are near raw `encoding/csv` parse (~2/row).
 
 ## Task 12: `csvtext` gate (parse-only)
 

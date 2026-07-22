@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"reflect"
 	"sync"
+	"sync/atomic"
 )
 
 // Marshaler converts a concrete type to a single CSV cell string.
@@ -128,6 +129,56 @@ func unmarshalCell(dst reflect.Value, cell string, o options) error {
 		return err
 	}
 	return parseBuiltin(dst, cell, o.allocEmptyPointers)
+}
+
+// unmarshalField uses the field plan's cached converter — no per-cell interface probing for builtins.
+func unmarshalField(dst reflect.Value, cell string, fp fieldPlan, o options) error {
+	if o.unmarshalers != nil {
+		if fn, ok := lookupUnmarshalFn(o.unmarshalers, dst); ok {
+			return fn(dst, cell)
+		}
+	}
+	switch fp.conv {
+	case fieldConvBuiltin:
+		return parseBuiltin(dst, cell, o.allocEmptyPointers)
+	case fieldConvUnmarshaler:
+		if ok, err := unmarshalViaCSVInterface(dst, cell); ok {
+			return err
+		}
+		return parseBuiltin(dst, cell, o.allocEmptyPointers)
+	case fieldConvTextUnmarshaler:
+		if ok, err := unmarshalViaText(dst, cell); ok {
+			return err
+		}
+		return parseBuiltin(dst, cell, o.allocEmptyPointers)
+	default:
+		return unmarshalCell(dst, cell, o)
+	}
+}
+
+// marshalField uses the field plan's cached converter — no per-cell interface probing for builtins.
+func marshalField(v reflect.Value, fp fieldPlan, o options) (string, error) {
+	if o.marshalers != nil {
+		if fn, ok := lookupMarshalFn(o.marshalers, v); ok {
+			return fn(v)
+		}
+	}
+	switch fp.conv {
+	case fieldConvBuiltin:
+		return formatBuiltin(v)
+	case fieldConvUnmarshaler:
+		if s, ok, err := marshalViaCSVInterface(v); ok {
+			return s, err
+		}
+		return formatBuiltin(v)
+	case fieldConvTextUnmarshaler:
+		if s, ok, err := marshalViaText(v); ok {
+			return s, err
+		}
+		return formatBuiltin(v)
+	default:
+		return marshalCell(v, o)
+	}
 }
 
 func lookupMarshalFn(m *Marshalers, v reflect.Value) (marshalFn, bool) {
@@ -280,8 +331,9 @@ func valueAs[T any](v reflect.Value) (T, bool) {
 }
 
 var (
-	registryMu        sync.RWMutex
-	globalMarshalFns  = make(map[reflect.Type]marshalFn)
+	registryMu         sync.RWMutex
+	registryGen        atomic.Uint64
+	globalMarshalFns   = make(map[reflect.Type]marshalFn)
 	globalUnmarshalFns = make(map[reflect.Type]unmarshalFn)
 )
 
@@ -292,6 +344,7 @@ func RegisterMarshaler[T any](fn func(T) (string, error)) {
 	typ := reflect.TypeOf(zero)
 	registryMu.Lock()
 	globalMarshalFns[typ] = m.byType[typ]
+	registryGen.Add(1)
 	registryMu.Unlock()
 }
 
@@ -302,6 +355,7 @@ func RegisterUnmarshaler[T any](fn func(string) (T, error)) {
 	typ := reflect.TypeOf(zero)
 	registryMu.Lock()
 	globalUnmarshalFns[typ] = u.byType[typ]
+	registryGen.Add(1)
 	registryMu.Unlock()
 }
 
@@ -310,6 +364,7 @@ func ClearRegistry() {
 	registryMu.Lock()
 	clear(globalMarshalFns)
 	clear(globalUnmarshalFns)
+	registryGen.Add(1)
 	registryMu.Unlock()
 }
 

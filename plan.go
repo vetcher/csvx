@@ -1,18 +1,29 @@
 package csvx
 
 import (
+	"encoding"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 )
 
+type fieldConv uint8
+
+const (
+	fieldConvBuiltin fieldConv = iota
+	fieldConvUnmarshaler
+	fieldConvTextUnmarshaler
+	fieldConvSlow // local/global hooks may apply; full lookup
+)
+
 type fieldPlan struct {
-	index              []int
-	name               string
-	colIndex           int
+	index               []int
+	name                string
+	colIndex            int
 	omitEmpty, omitZero bool
-	inline             bool
+	inline              bool
+	conv                fieldConv
 }
 
 type typePlan struct {
@@ -21,11 +32,19 @@ type typePlan struct {
 }
 
 type planKey struct {
-	typ reflect.Type
-	fp  uintptr
+	typ         reflect.Type
+	fp          uintptr
+	registryGen uint64
 }
 
 var planCache sync.Map
+
+var (
+	unmarshalerType     = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
+	textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	marshalerType       = reflect.TypeOf((*Marshaler)(nil)).Elem()
+	textMarshalerType   = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+)
 
 func optionsPlanFingerprint(o options) uintptr {
 	var fp uintptr
@@ -35,11 +54,66 @@ func optionsPlanFingerprint(o options) uintptr {
 	return fp
 }
 
+func classifyFieldConv(t reflect.Type) fieldConv {
+	if typeOrPtrImplements(t, unmarshalerType) || typeOrPtrImplements(t, marshalerType) {
+		return fieldConvUnmarshaler
+	}
+	if globalHasUnmarshaler(t) || globalHasMarshaler(t) {
+		return fieldConvSlow
+	}
+	if typeOrPtrImplements(t, textUnmarshalerType) || typeOrPtrImplements(t, textMarshalerType) {
+		return fieldConvTextUnmarshaler
+	}
+	return fieldConvBuiltin
+}
+
+func typeOrPtrImplements(t reflect.Type, iface reflect.Type) bool {
+	if t.Implements(iface) {
+		return true
+	}
+	if t.Kind() != reflect.Pointer && reflect.PointerTo(t).Implements(iface) {
+		return true
+	}
+	if t.Kind() == reflect.Pointer && t.Elem().Implements(iface) {
+		return true
+	}
+	return false
+}
+
+func globalHasUnmarshaler(t reflect.Type) bool {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	return globalMapHasType(globalUnmarshalFns, t)
+}
+
+func globalHasMarshaler(t reflect.Type) bool {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	return globalMapHasType(globalMarshalFns, t)
+}
+
+func globalMapHasType[T any](m map[reflect.Type]T, t reflect.Type) bool {
+	if len(m) == 0 {
+		return false
+	}
+	if _, ok := m[t]; ok {
+		return true
+	}
+	if t.Kind() == reflect.Pointer {
+		if _, ok := m[t.Elem()]; ok {
+			return true
+		}
+	} else if _, ok := m[reflect.PointerTo(t)]; ok {
+		return true
+	}
+	return false
+}
+
 func buildTypePlan(t reflect.Type, o options) (*typePlan, error) {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
-	key := planKey{typ: t, fp: optionsPlanFingerprint(o)}
+	key := planKey{typ: t, fp: optionsPlanFingerprint(o), registryGen: registryGen.Load()}
 	if cached, ok := planCache.Load(key); ok {
 		return cached.(*typePlan), nil
 	}
@@ -104,6 +178,7 @@ func walkStructFields(st reflect.Type, indexPrefix []int, o options, out *[]fiel
 			index:     idx,
 			omitEmpty: omitEmpty,
 			omitZero:  omitZero,
+			conv:      classifyFieldConv(sf.Type),
 		}
 
 		if o.noHeader {

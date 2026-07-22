@@ -307,7 +307,7 @@ func (d *Decoder) fillStructFromRecord(elem reflect.Value, record []string) erro
 		if d.o.noHeader {
 			col = noHeaderColumnName(fp)
 		}
-		if err := unmarshalCell(dst, cell, d.o); err != nil {
+		if err := unmarshalField(dst, cell, fp, d.o); err != nil {
 			return &FieldError{Row: d.dataRow, Column: col, Err: err}
 		}
 	}

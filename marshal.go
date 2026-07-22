@@ -125,7 +125,7 @@ func marshalFieldCell(fv reflect.Value, fp fieldPlan, o options) (string, error)
 	if fp.omitEmpty && isEmptyForOmit(fv) {
 		return "", nil
 	}
-	return marshalCell(fv, o)
+	return marshalField(fv, fp, o)
 }
 
 func isEmptyForOmit(v reflect.Value) bool {

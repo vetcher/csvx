@@ -10,6 +10,8 @@ type Options struct {
 	comment                   *rune
 	lazyQuotes                *bool
 	trimLeadingSpace          *bool
+	marshalers                *Marshalers
+	unmarshalers              *Unmarshalers
 }
 
 type options struct {
@@ -21,6 +23,8 @@ type options struct {
 	comment                   rune // 0 = unset → backend default 0
 	lazyQuotes                bool
 	trimLeadingSpace          bool
+	marshalers                *Marshalers
+	unmarshalers              *Unmarshalers
 }
 
 func boolOpt(v bool) *bool { return &v }
@@ -61,6 +65,12 @@ func joinOptions(opts []Options) options {
 		}
 		if o.trimLeadingSpace != nil {
 			out.trimLeadingSpace = *o.trimLeadingSpace
+		}
+		if o.marshalers != nil {
+			out.marshalers = o.marshalers
+		}
+		if o.unmarshalers != nil {
+			out.unmarshalers = o.unmarshalers
 		}
 	}
 	return out

@@ -73,7 +73,7 @@ Notes:
   - `*[]T` / `*[]*T` / `*[]map[string]string`: decode **all remaining** rows into the slice (appends; does not clear existing elements unless documented helper says otherwise — v1: **overwrite** by setting `len=0` then append).
   - Mixing “one row” and “all rows” in one Decoder is supported sequentially only for one-row targets; after an all-rows Decode, next Decode returns `io.EOF`.
 - Prefer `Unmarshal*` for full-document slice loads; use `Decode` for streaming one-row targets and `Rows`.
-- No process-wide `SetCSVReader` / `SetCSVWriter` mutators (unlike gocsv). Configure via Options per call or per Encoder/Decoder.
+- No process-wide `SetCSVReader` / `SetCSVWriter` mutators. Configure via Options per call or per Encoder/Decoder.
 
 ### Supported value shapes
 
@@ -124,7 +124,7 @@ Baseline tag features (full option laundry list deferred to a dedicated options 
 - Ignore: `` `csv:"-"` ``
 - `omitzero`, `omitempty`
 - `format:...` for specialized formatting when applicable
-- Inline nested struct: `` `csv:"."` `` (gocsv-style; no parent prefix)
+- Inline nested struct: `` `csv:"."` `` (no parent prefix)
 - Under `NoHeader`: index tags `` `csv:"0"` `` etc., or declaration order
 
 ## Marshalers and unmarshalers
@@ -193,11 +193,11 @@ Opaque, composable, variadic. No process-wide dialect globals.
 
 **Semantic:** `NoHeader`, `AllowUnknownColumns`, `MatchCaseInsensitiveNames`, omit helpers, `WithMarshalers`, `WithUnmarshalers`, `AllocEmptyPointers`.
 
-**From gocsv (keep conceptually):** per-type converters via marshalers; nested/inline `.`; ignore `-`.
+**Keep:** per-type converters via marshalers; nested/inline `.`; ignore `-`.
 
-**From gocsv (drop):** global `SetCSVReader` / `SetCSVWriter`.
+**Drop:** global `SetCSVReader` / `SetCSVWriter` style configuration.
 
-**Deferred:** author must approve the **complete** Options list (gocsv-inspired + json/v2 analogues) before implementation plan freezes every name. Starter set above is normative until that review adds/renames entries.
+**Deferred:** author must approve the **complete** Options list (json/v2 analogues plus CSV dialect/semantic knobs) before implementation plan freezes every name. Starter set above is normative until that review adds/renames entries.
 
 ## Data flow
 
@@ -260,7 +260,7 @@ No production code without a failing test first (see project TDD skill).
 Suite under `bench/`:
 
 1. Parse-only vs `encoding/csv`
-2. Struct unmarshal vs gocsv (and csvutil if useful)
+2. Struct unmarshal vs other popular binders if useful later (stdlib parse-only remains primary peer)
 3. Struct marshal vs same
 4. Streaming `Decode` with `ReportAllocs`
 
@@ -280,5 +280,5 @@ Ship the semantic API on an `encoding/csv` backend first (TDD). Prototype a fast
 
 ## Open follow-ups (before or during planning)
 
-1. Author review of **full Options list** (gocsv-inspired + json/v2 analogues) — required before plan freezes names.
+1. Author review of **full Options list** (json/v2 analogues + CSV dialect/semantic knobs) — required before plan freezes names.
 2. Whether a `csvx/register` side-effect subpackage is ever desired (not required for v1; default: no).

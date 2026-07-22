@@ -1,6 +1,6 @@
 # csvx benchmarks
 
-Comparison suite for `encoding/csv`, [csvx](../) (this repo), and [gocarina/gocsv](https://github.com/gocarina/gocsv).
+Comparison suite for `encoding/csv` and [csvx](../) (this repo).
 
 ## Fixture
 
@@ -13,18 +13,6 @@ Comparison suite for `encoding/csv`, [csvx](../) (this repo), and [gocarina/gocs
 cd bench
 go mod tidy
 go test -bench=. -benchmem -count=1
-```
-
-If `go mod tidy` cannot resolve `gocsv` via the public module proxy, fetch it directly:
-
-```bash
-GOPROXY=direct go mod tidy
-```
-
-Without `gocsv`, build with the `nogocsv` tag (csvx and `encoding/csv` benches still run):
-
-```bash
-go test -tags nogocsv -bench=. -benchmem -count=1
 ```
 
 ## Published results
@@ -42,7 +30,6 @@ go test -tags nogocsv -bench=. -benchmem -count=1
 | `BenchmarkCSVx_UnmarshalStruct` | 18,251,311 | 32.27 | 15,782,958 | 240,056 |
 | `BenchmarkCSVx_MarshalStruct` | 12,761,617 | — | 6,898,109 | 210,018 |
 | `BenchmarkCSVx_DecodeAllocs` | 14,060,610 | 41.89 | 5,429,359 | 220,035 |
-| `BenchmarkGoCSV_UnmarshalStruct` | 8,297,291 | 70.98 | 9,611,754 | 140,059 |
 
 Results from `go test -bench=. -benchmem -count=1` in this directory. Re-run on your machine to refresh; numbers vary by hardware.
 

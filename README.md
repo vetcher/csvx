@@ -1,6 +1,6 @@
 # csvx
 
-Fast, struct-tag-driven CSV encoding and decoding for Go (gocsv-style API with explicit options).
+Fast, struct-tag-driven CSV encoding and decoding for Go (`encoding/json`-shaped API with explicit options).
 
 ## Install
 
